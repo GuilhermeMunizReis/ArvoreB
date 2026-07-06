@@ -9,14 +9,11 @@ class BTreeNode:
 class BTree:
 	def __init__(self, t):
 		self.root = BTreeNode(True)
-
-		# Ordem da B-Tree (máximo de filhos)
-		self.t = t
-
-		# Limites de chaves
-		self.max_keys = self.t - 1
-		self.min_children = math.ceil(self.t / 2)
-		self.min_keys = self.min_children - 1
+		#'t' is order of B Tree
+		#self.t = t
+		#self.t = (t + 1) // 2
+		g = math.ceil(t / 2)
+		self.t = g
 
 
 	def print_tree(self, x, l = 0):
@@ -56,46 +53,24 @@ class BTree:
 			#Search entire tree as node not provided
 			return self.search(k, self.root)
 
-	def _insert(self, x, k):
-	
-		i = 0
-	
-		while i < len(x.keys) and k > x.keys[i]:
-			i += 1
-	
-	
-		if x.leaf:
-		
-			x.keys.insert(i, k)
-	
-		else:
-		
-			self._insert(x.child[i], k)
-	
-	
-			if len(x.child[i].keys) > self.max_keys:
-			
-				self._split_child(x, i)
-    
 	def insert(self, k):
 		"""Calls helper functions to insert key 'k' in the B-Tree
 
 		Arguments:
 			k -- key to be inserted
 		"""
+		root = self.root
+		#Keys are full, hence we must split child
+		if len(root.keys) == (2 * self.t) - 1:
+			temp = BTreeNode()
+			self.root = temp
+			#Former root becomes 0th child of new root 'temp'
+			temp.child.insert(0, root)
+			self._split_child(temp, 0)
+			self._insert_nonfull(temp, k)
+		else:
+			self._insert_nonfull(root, k)
 
-		self._insert(self.root, k)
-
-
-		if len(self.root.keys) > self.max_keys:
-
-			old_root = self.root
-
-			self.root = BTreeNode(False)
-
-			self.root.child.append(old_root)
-
-			self._split_child(self.root, 0)
 	def _insert_nonfull(self, x, k):
 		"""Insert key 'k' at position 'x' in a non-full node
 
@@ -114,7 +89,7 @@ class BTree:
 			while i >= 0 and k < x.keys[i]:
 				i -= 1
 			i += 1
-			if len(x.child[i].keys) == self.max_keys:
+			if len(x.child[i].keys) == (2 * self.t) - 1:
 				self._split_child(x, i)
 				if k > x.keys[i]:
 					i += 1
@@ -127,36 +102,16 @@ class BTree:
 			x -- parent node of the node to be split
 			i -- index value of the child
 		"""
+		t = self.t
 		y = x.child[i]
-	
 		z = BTreeNode(y.leaf)
-	
-	
-		middle = len(y.keys) // 2
-	
-	
-		x.keys.insert(
-			i,
-			y.keys[middle]
-		)
-	
-	
-		x.child.insert(
-			i + 1,
-			z
-		)
-	
-	
-		z.keys = y.keys[middle + 1:]
-	
-		y.keys = y.keys[:middle]
-	
-	
+		x.child.insert(i + 1, z)
+		x.keys.insert(i, y.keys[t - 1])
+		z.keys = y.keys[t : (2 * t) - 1]
+		y.keys = y.keys[0 : t - 1]
 		if not y.leaf:
-		
-			z.child = y.child[middle + 1:]
-	
-			y.child = y.child[:middle + 1]
+			z.child = y.child[t : 2 * t]
+			y.child = y.child[0 : t - 1]
 
 	def delete(self, x, k):
 		"""Calls helper functions to delete key 'k' after searching from node 'x'
@@ -165,7 +120,7 @@ class BTree:
 			x -- node, according to whose relative position, helper functions are called
 			k -- key to be deleted
 		"""
-		min_keys = self.min_keys
+		t = self.t
 		i = 0
 		while i < len(x.keys) and k > x.keys[i]:
 			i += 1
@@ -180,24 +135,24 @@ class BTree:
 		if i < len(x.keys) and x.keys[i] == k :
 			return self._delete_internal_node(x, k, i)
 		#Recursively calling 'delete' on x's child
-		elif len(x.child[i].keys) > self.min_keys:
+		elif len(x.child[i].keys) >= t:
 			self.delete(x.child[i], k)			
 		#Ensuring that a child always has atleast 't' keys
 		else:
 			if i != 0 and i+2 < len(x.child):
-				if len(x.child[i-1].keys) > self.min_keys:
+				if len(x.child[i-1].keys) >= t:
 					self._delete_sibling(x, i, i-1)
-				elif len(x.child[i+1].keys) > self.min_keys:
+				elif len(x.child[i+1].keys) >= t:
 					self._delete_sibling(x, i, i+1)
 				else:
 					self._del_merge(x, i, i+1)
 			elif i == 0: 
-				if len(x.child[i+1].keys) > self.min_keys:
+				if len(x.child[i+1].keys) >= t:
 					self._delete_sibling(x, i, i+1)
 				else:
 					self._del_merge(x, i, i+1)
 			elif i+1 == len(x.child):
-				if len(x.child[i-1].keys) > self.min_keys:
+				if len(x.child[i-1].keys) >= t:
 					self._delete_sibling(x, i, i-1)
 				else:
 					self._del_merge(x, i, i-1)
@@ -212,6 +167,7 @@ class BTree:
 			i -- index position of key in the list
 
 		"""
+		t = self.t
 		#Deleting the key if the node is a leaf
 		if x.leaf:
 			if x.keys[i] == k:
@@ -220,17 +176,17 @@ class BTree:
 			return
 
 		#Replacing the key with its predecessor and deleting predecessor
-		if len(x.child[i].keys) > self.min_keys:
+		if len(x.child[i].keys) >= t :
 			x.keys[i] = self._delete_predecessor(x.child[i])
 			return
 		#Replacing the key with its successor and deleting successor
-		elif len(x.child[i+1].keys) > self.min_keys:
+		elif len(x.child[i+1].keys) >= t:
 			x.keys[i] = self._delete_successor(x.child[i+1])
 			return
 		#Merging the child, its left sibling and the key 'k'
 		else:
 			self._del_merge(x, i, i+1)
-			self._delete_internal_node(x.child[i], k, self.min_keys)
+			self._delete_internal_node(x.child[i], k, self.t - 1)
 
 	def _delete_predecessor(self, x):
 		"""Returns and deletes predecessor of key 'k' which is to be deleted
@@ -241,7 +197,7 @@ class BTree:
 		if x.leaf:
 			return x.pop()
 		n = len(x.keys) - 1
-		if len(x.child[n].keys) > self.min_keys:
+		if len(x.child[n].keys) >= self.t:
 			self._delete_sibling(x, n+1, n)
 		else:
 			self._del_merge(x, n, n+1)
@@ -255,7 +211,7 @@ class BTree:
 		"""
 		if x.leaf:
 			return x.keys.pop(0)
-		if len(x.child[1].keys) > self.min_keys:
+		if len(x.child[1].keys) >= self.t:
 			self._delete_sibling(x, 0, 1)
 		else:
 			self._del_merge(x, 0, 1)

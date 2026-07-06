@@ -1,5 +1,7 @@
 __pycache__
 
-.pyc
-.gv
-.pdf
+*.pyc
+*.gv
+*.pdf
+
+teste.py
