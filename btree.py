@@ -128,205 +128,220 @@ class BTree:
 			i -- index value of the child
 		"""
 		y = x.child[i]
-	
+
 		z = BTreeNode(y.leaf)
-	
-	
+
+
 		middle = len(y.keys) // 2
-	
-	
+
+
 		x.keys.insert(
 			i,
 			y.keys[middle]
 		)
-	
-	
+
+
 		x.child.insert(
 			i + 1,
 			z
 		)
-	
-	
+
+
 		z.keys = y.keys[middle + 1:]
-	
+
 		y.keys = y.keys[:middle]
-	
-	
+
+
 		if not y.leaf:
-		
+
 			z.child = y.child[middle + 1:]
-	
+
 			y.child = y.child[:middle + 1]
 
 	def delete(self, x, k):
-		"""Calls helper functions to delete key 'k' after searching from node 'x'
-
-		Arguments:
-			x -- node, according to whose relative position, helper functions are called
-			k -- key to be deleted
-		"""
-		min_keys = self.min_keys
+	
 		i = 0
+	
 		while i < len(x.keys) and k > x.keys[i]:
 			i += 1
-		#Deleting the key if the node is a leaf
-		if x.leaf:
-			if i < len(x.keys) and x.keys[i] == k:
-				x.keys.pop(i)
-				return
-			return
-		
-		#Calling '_delete_internal_node' when x is an internal node and contains the key 'k'
-		if i < len(x.keys) and x.keys[i] == k :
-			return self._delete_internal_node(x, k, i)
-		#Recursively calling 'delete' on x's child
-		elif len(x.child[i].keys) > self.min_keys:
-			self.delete(x.child[i], k)			
-		#Ensuring that a child always has atleast 't' keys
-		else:
-			if i != 0 and i+2 < len(x.child):
-				if len(x.child[i-1].keys) > self.min_keys:
-					self._delete_sibling(x, i, i-1)
-				elif len(x.child[i+1].keys) > self.min_keys:
-					self._delete_sibling(x, i, i+1)
-				else:
-					self._del_merge(x, i, i+1)
-			elif i == 0: 
-				if len(x.child[i+1].keys) > self.min_keys:
-					self._delete_sibling(x, i, i+1)
-				else:
-					self._del_merge(x, i, i+1)
-			elif i+1 == len(x.child):
-				if len(x.child[i-1].keys) > self.min_keys:
-					self._delete_sibling(x, i, i-1)
-				else:
-					self._del_merge(x, i, i-1)
-			self.delete(x.child[i], k)
 	
-	def _delete_internal_node(self, x, k, i):
-		"""Deletes internal node
-
-		Arguments:
-			x -- internal node in which key 'k' is present
-			k -- key to be deleted
-			i -- index position of key in the list
-
-		"""
-		#Deleting the key if the node is a leaf
-		if x.leaf:
-			if x.keys[i] == k:
-				x.keys.pop(i)
-				return
-			return
-
-		#Replacing the key with its predecessor and deleting predecessor
-		if len(x.child[i].keys) > self.min_keys:
-			x.keys[i] = self._delete_predecessor(x.child[i])
-			return
-		#Replacing the key with its successor and deleting successor
-		elif len(x.child[i+1].keys) > self.min_keys:
-			x.keys[i] = self._delete_successor(x.child[i+1])
-			return
-		#Merging the child, its left sibling and the key 'k'
-		else:
-			self._del_merge(x, i, i+1)
-			self._delete_internal_node(x.child[i], k, self.min_keys)
-
-	def _delete_predecessor(self, x):
-		"""Returns and deletes predecessor of key 'k' which is to be deleted
-
-		Arguments:
-			x -- node
-		"""
-		if x.leaf:
-			return x.pop()
-		n = len(x.keys) - 1
-		if len(x.child[n].keys) > self.min_keys:
-			self._delete_sibling(x, n+1, n)
-		else:
-			self._del_merge(x, n, n+1)
-		self._delete_predecessor(x.child[n])
-
-	def _delete_successor(self, x):
-		"""Returns and deletes successor of key 'k' which is to be deleted
-
-		Arguments:
-			x -- node
-		"""
-		if x.leaf:
-			return x.keys.pop(0)
-		if len(x.child[1].keys) > self.min_keys:
-			self._delete_sibling(x, 0, 1)
-		else:
-			self._del_merge(x, 0, 1)
-		self._delete_successor(x.child[0])
-
-	def _del_merge(self, x, i, j):
-		"""Merges the children of x and one of its own keys
-
-		Arguments:
-			x -- parent node
-			i -- index of one of the children
-			j -- index of one of the children
-		"""
-		cnode = x.child[i]
-
-		#Merging the x.child[i], x.child[j] and x.keys[i]
-		if j > i:			
-			rsnode = x.child[j]
-			cnode.keys.append(x.keys[i])
-			#Assigning keys of right sibling node to child node
-			for k in range(len(rsnode.keys)):
-				cnode.keys.append(rsnode.keys[k])
-				if len(rsnode.child) > 0:
-					cnode.child.append(rsnode.child[k])
-			if len(rsnode.child) > 0:
-				cnode.child.append(rsnode.child.pop())
-			new = cnode
-			x.keys.pop(i)
-			x.child.pop(j)
-		#Merging the x.child[i], x.child[j] and x.keys[i]
-		else :
-			lsnode = x.child[j]
-			lsnode.keys.append(x.keys[j])
-			#Assigning keys of left sibling node to child node
-			for i in range(len(cnode.keys)):
-				lsnode.keys.append(cnode.keys[i])
-				if len(lsnode.child) > 0:
-					lsnode.child.append(cnode.child[i])
-			if len(lsnode.child) > 0:
-				lsnode.child.append(cnode.child.pop())
-			new = lsnode
-			x.keys.pop(j)
-			x.child.pop(i)
+	
+		# Caso a chave esteja no nó atual
+		if i < len(x.keys) and x.keys[i] == k:
 		
-		#If x is root and is empty, then re-assign root
+			if x.leaf:
+				x.keys.pop(i)
+	
+			else:
+				self._delete_internal_node(x, i)
+	
+			return
+	
+	
+		# Caso seja uma folha e não encontrou
+		if x.leaf:
+			return
+	
+	
+		# Garante que o filho tenha chaves suficientes antes de descer
+		if len(x.child[i].keys) == self.min_keys:
+		
+			self._fix_child(x, i)
+	
+	
+		# Após ajuste o índice pode mudar
+		if i > len(x.child) - 1:
+			i = len(x.child) - 1
+	
+	
+		self.delete(x.child[i], k)
+	
+	def _fix_child(self, x, i):
+	
+		# tenta pegar do irmão esquerdo
+		if i > 0 and len(x.child[i-1].keys) > self.min_keys:
+		
+			self._borrow_from_left(x, i)
+	
+	
+		# tenta pegar do irmão direito
+		elif i < len(x.child)-1 and len(x.child[i+1].keys) > self.min_keys:
+		
+			self._borrow_from_right(x, i)
+	
+	
+		# precisa fundir
+		else:
+		
+			if i < len(x.child)-1:
+				self._merge(x, i)
+	
+			else:
+				self._merge(x, i-1)
+	
+	def _delete_internal_node(self, x, i):
+	
+		key = x.keys[i]
+	
+	
+		left = x.child[i]
+		right = x.child[i+1]
+	
+	
+		# Caso o filho esquerdo tenha chave sobrando
+		if len(left.keys) > self.min_keys:
+		
+			pred = self._get_predecessor(left)
+	
+			x.keys[i] = pred
+	
+			self.delete(left, pred)
+	
+	
+		# Caso o filho direito tenha chave sobrando
+		elif len(right.keys) > self.min_keys:
+		
+			succ = self._get_successor(right)
+	
+			x.keys[i] = succ
+	
+			self.delete(right, succ)
+	
+	
+		# Fundir filhos
+		else:
+		
+			self._merge(x, i)
+	
+			self.delete(left, key)
+	
+	def _get_predecessor(self, x):
+	
+		while not x.leaf:
+			x = x.child[-1]
+	
+		return x.keys[-1]
+	
+	def _get_successor(self, x):
+	
+		while not x.leaf:
+			x = x.child[0]
+	
+		return x.keys[0]
+	
+	def _borrow_from_left(self, x, i):
+	
+		child = x.child[i]
+		left = x.child[i-1]
+	
+	
+		child.keys.insert(
+			0,
+			x.keys[i-1]
+		)
+	
+	
+		x.keys[i-1] = left.keys.pop()
+	
+	
+		if not left.leaf:
+		
+			child.child.insert(
+				0,
+				left.child.pop()
+			)
+	
+	def _borrow_from_right(self, x, i):
+	
+		child = x.child[i]
+		right = x.child[i+1]
+	
+	
+		child.keys.append(
+			x.keys[i]
+		)
+	
+	
+		x.keys[i] = right.keys.pop(0)
+	
+	
+		if not right.leaf:
+		
+			child.child.append(
+				right.child.pop(0)
+			)
+	
+	def _merge(self, x, i):
+	
+		left = x.child[i]
+		right = x.child[i+1]
+	
+	
+		# coloca chave do pai no meio
+		left.keys.append(
+			x.keys.pop(i)
+		)
+	
+	
+		# copia chaves do irmão direito
+		left.keys.extend(
+			right.keys
+		)
+	
+	
+		# copia filhos
+		if not right.leaf:
+		
+			left.child.extend(
+				right.child
+			)
+	
+	
+		# remove irmão direito
+		x.child.pop(i+1)
+	
+	
+		# caso a raiz fique vazia
 		if x == self.root and len(x.keys) == 0:
-			self.root = new
-
-	def _delete_sibling(self, x, i, j):
-		"""Borrows a key from jth child of x and appends it to ith child of x
-
-		Arguments:
-			x -- parent node
-			i -- index of one of the children
-			j -- index of one of the children
-		"""
-		cnode = x.child[i]
-		if i < j:
-			#Borrowing key from right sibling of the child
-			rsnode = x.child[j]
-			cnode.keys.append(x.keys[i])
-			x.keys[i] = rsnode.keys[0]
-			if len(rsnode.child)>0:
-				cnode.child.append(rsnode.child[0])
-				rsnode.child.pop(0)
-			rsnode.keys.pop(0)
-		else :
-			#Borrowing key from left sibling of the child
-			lsnode = x.child[j]
-			cnode.keys.insert(0,x.keys[i-1])
-			x.keys[i-1] = lsnode.keys.pop()
-			if len(lsnode.child)>0:
-				cnode.child.insert(0,lsnode.child.pop())
-
+		
+			self.root = left
